@@ -7,6 +7,7 @@
 
 import UIKit
 import SwiftUI
+import CoreImage
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
@@ -23,8 +24,38 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // Use a UIHostingController as window root view controller.
         if let windowScene = scene as? UIWindowScene {
+
+            let image = UIImage(named: "example")!
+            let ciImage = CIImage(image: image)!
+
+            guard let kMeansFilter = CIFilter(name: "CIKMeans") else {
+               fatalError("Could not initialize `CIKMeans` filter.")
+            }
+
+            kMeansFilter.setValue(ciImage, forKey: kCIInputImageKey)
+            kMeansFilter.setValue(CIVector(cgRect: ciImage.extent), forKey: "inputExtent")
+            kMeansFilter.setValue(2, forKey: "inputCount")
+            kMeansFilter.setValue(10, forKey: "inputPasses")
+            kMeansFilter.setValue(NSNumber(value: true), forKey: "inputPerceptual")
+            kMeansFilter.setValue(CIImage(color: CIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)).cropped(to: CGRect(x: 0, y: 0, width: 1, height: 1)), forKey: "inputMeans")
+
+            let meansOutputImage = kMeansFilter.outputImage!
+            print("Output image: \(meansOutputImage)")
+
+            let palettizeFilter = CIFilter(name: "CIPalettize")!
+            palettizeFilter.setValue(ciImage, forKey: "inputImage")
+            palettizeFilter.setValue(meansOutputImage, forKey: "inputPaletteImage")
+            palettizeFilter.setValue(0, forKey: "inputPerceptual")
+
+            let palettizeOutput = palettizeFilter.outputImage!.cropped(to: CGRect(x: 0, y: 0, width: 500, height: 500))
+
+            print("Palete output: \(palettizeOutput)")
+
             let window = UIWindow(windowScene: windowScene)
-            window.rootViewController = UIHostingController(rootView: contentView)
+            window.rootViewController = UIHostingController(rootView: VStack {
+                Image(uiImage: UIImage(ciImage: palettizeOutput))
+                Text("Image above")
+            }.background(Color.red))
             self.window = window
             window.makeKeyAndVisible()
         }
